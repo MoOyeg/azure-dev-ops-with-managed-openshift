@@ -208,11 +208,11 @@ resource "azuredevops_serviceendpoint_kubernetes" "openshift-service-endpoint" {
   } 
 }
 
-#Create an Azure DevOps GitOps Connection
+#Create an Azure DevOps GitHub Connection
 
 resource "azuredevops_serviceendpoint_github" "gitops-connection" {
   project_id            = azuredevops_project.azure-devops-pipeline.id
-  service_endpoint_name = "GitOps Connection"
+  service_endpoint_name = "GitHub Connection"
   auth_personal {
     personal_access_token = var.AZDO_GITHUB_SERVICE_CONNECTION_PAT
   }
@@ -267,7 +267,7 @@ resource "azuredevops_pipeline_authorization" "azuredevops_pipeline_authorizatio
   pipeline_id = azuredevops_build_definition.azuredevops_build_definition.id
 }
 
-# Authorize Azure DevOps Pipeline to use GitOps Connection
+# Authorize Azure DevOps Pipeline to use GitHub Connection
 
 resource "azuredevops_pipeline_authorization" "azuredevops_pipeline_authorization_endpoint_gitops" {
   project_id  = azuredevops_project.azure-devops-pipeline.id

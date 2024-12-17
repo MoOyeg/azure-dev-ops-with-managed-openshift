@@ -11,8 +11,8 @@ resources:
  repositories:
    - repository: github_repo_devops
      type: github
-     endpoint: "Gitops Connection"
-     name: MoOyeg/azure-dev-ops-with-managed-openshift-gitops
+     endpoint: "GitHub Connection"
+     name: redhat-na-ssa/azure-pipeline-demo-react-app
      ref: $(Build.SourceBranchName)
 
 pool:
@@ -44,7 +44,7 @@ stages:
             containerRegistry: 'container-registry-connection'
             repository: '$(project-name-dev)/$(image-name)'
             command: 'build'
-            Dockerfile: $(Build.SourcesDirectory)/react-app-example/app/Dockerfile
+            Dockerfile: $(Build.SourcesDirectory)/Dockerfile
             tags: $(Build.BuildId)
         - task: Docker@2.240.2
           displayName: 'Push Docker image to OpenShift internal registry'
