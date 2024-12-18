@@ -51,7 +51,7 @@ stages:
             containerRegistry: 'container-registry-connection'
             repository: '$(project-name-dev)/$(image-name)'
             command: 'build'
-            Dockerfile: $(Build.SourcesDirectory)/Dockerfile
+            Dockerfile: $(Build.SourcesDirectory)/azure-pipeline-demo-react-app/Dockerfile
             tags: $(Build.BuildId)
         - task: Docker@2.240.2
           displayName: 'Push Docker image to OpenShift internal registry'
