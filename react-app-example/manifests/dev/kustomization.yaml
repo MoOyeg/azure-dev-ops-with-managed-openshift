@@ -4,4 +4,4 @@ resources:
 images:
  - name: react-replace-image
    newName: ado-openshift/ado-react-app
-   newTag: '96'
+   newTag: '99'
