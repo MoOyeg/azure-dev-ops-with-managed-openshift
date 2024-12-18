@@ -12,9 +12,13 @@ resources:
    - repository: github_repo_devops
      type: github
      endpoint: "GitHub Connection"
-     name: redhat-na-ssa/azure-pipeline-demo-react-app
+     name: MoOyeg/azure-dev-ops-with-managed-openshift-gitops
      ref: $(Build.SourceBranchName)
-
+   - repository: github_src_repo
+     type: github
+     endpoint: "GitHub Connection"
+     name: redhat-na-ssa/azure-pipeline-demo-react-app
+     ref: main
 pool:
   name: AzurePipeline
 
@@ -35,6 +39,9 @@ stages:
       - job: build
         displayName: build
         steps:
+        - checkout: self
+        - checkout: github_src_repo
+          persistCredentials: true
         - task: CmdLine@2
           inputs:
             script: ls $(Build.SourcesDirectory)            

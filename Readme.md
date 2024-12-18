@@ -38,10 +38,10 @@ Example method to be run inside cloned repo folder
   ```
 
 ## Deploy Pipeline Example 1
-Pipeline Example 1 will 
-  1 Use Terraform to deploy an Azure DevOps Build Agent on OpenShift
-  2 Will create the required Azure Infrastucture on Azure DevOps(Pipeline, Registry and access to OpenShift)
-  3 When pipeline is started, Pipeline will build a Dotnet image, push it into the internal OpenShift image registry and deploy a sample application using that image.
+Pipeline Example 1 will   
+  1 Use Terraform to deploy an Azure DevOps Build Agent on OpenShift  
+  2 Will create the required Azure Infrastucture on Azure DevOps(Pipeline, Registry and access to OpenShift)  
+  3 When pipeline is started, Pipeline will build a Dotnet image, push it into the internal OpenShift image registry and deploy a sample application using that image.  
 
 ### Steps to deploy Example 1
 - [Fork Sample Github Repository](https://github.com/rh-mobb/azure-pipelines-openshift).Please edit the your azure-pipelines.yaml file, change the name of the devops pool to a name of your choice. Example - [azure-pipelines.yaml](https://github.com/MoOyeg/azure-pipelines-openshift/blob/main/azure-pipelines.yml)- Example used "AzurePipeline" . The automation expects to create the pool and will fail if the pool already exists. Pool name cannot be "Default"
@@ -134,11 +134,11 @@ helm uninstall azure-pipeline-openshift --namespace ado-openshift
 ```
 
 ## Deploy Pipeline Example 2
-Pipeline Example 2 will 
-  1 Install OpenShift gitops 
-  1 Use Terraform to deploy an Azure DevOps Build Agent on OpenShift and an ArgoCD Application
-  2 Will create the required Azure Infrastucture on Azure DevOps(Pipeline, Registry and access to OpenShift)
-  3 When pipeline is started, Pipeline will build a react image, push it into the internal OpenShift image registry. Pipeline will update the git repo with the details of the new image which the ArgoCD application should auto sync.
+Pipeline Example 2 will   
+  1 Install OpenShift gitops   
+  1 Use Terraform to deploy an Azure DevOps Build Agent on OpenShift and an ArgoCD Application  
+  2 Will create the required Azure Infrastucture on Azure DevOps(Pipeline, Registry and access to OpenShift)  
+  3 When pipeline is started, Pipeline will build a react image, push it into the internal OpenShift image registry. Pipeline will update the git repo with the details of the new image which the ArgoCD application should auto sync.  
 
 ### Steps to deploy Example 2
 
