@@ -1,7 +1,7 @@
 
 #Set Variables
 variable "AZDO_GITHUB_SERVICE_CONNECTION_PAT" {
-  type = string
+  type      = string
   sensitive = true
 }
 
@@ -27,48 +27,64 @@ variable "GITHUB_REPO_NAME" {
 }
 
 variable "GITHUB_REPO_BRANCH" {
-  type = string
+  type    = string
   default = "main"
 }
 
 variable "GITHUB_AZURE_PIPELINE_PATH" {
-  type = string
+  type    = string
   default = "azure-pipelines.yml"
 }
 
 variable "PIPELINE_NAMESPACE" {
-  type = string
+  type    = string
   default = "ado-openshift"
 }
 
 variable "BUILD_NAMESPACE" {
-  type = string
+  type    = string
   default = "azure-build"
 }
 
 variable "BUILD_SERVICEACCOUNT_NAME" {
-  type = string
+  type    = string
   default = "azure-build-agent-openshift-sa"
 }
 
 variable "PIPELINE_SERVICEACCOUNT_NAME" {
-  type = string
+  type    = string
   default = "azure-sa"
 }
 
 variable "PIPELINE_SECRETNAME" {
-  type = string
+  type    = string
   default = "azure-sa-devops-secret"
 }
 
 variable "IMAGEREGISTRY_ROUTE_NAME" {
-  type = string
+  type    = string
   default = "default-route"
 }
 
 variable "IMAGEREGISTRY_ROUTE_NAMESPACE" {
-  type = string
+  type    = string
   default = "openshift-image-registry"
+}
+
+variable "IMAGEREGISTRY_USERNAME" {
+  type    = string
+  default = ""
+}
+
+variable "IMAGEREGISTRY_PASSWORD" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "IMAGEREGISTRY_URL" {
+  type    = string
+  default = ""
 }
 
 #Create Azure Agent Build via Helm on OCP
@@ -76,8 +92,8 @@ resource "helm_release" "azure-build-agent-openshift" {
   name             = "azure-build-agent-openshift"
   chart            = "../charts/azure-build-agent-openshift"
   create_namespace = "true"
-  namespace        = "${var.BUILD_NAMESPACE}"
-  wait = "true"
+  namespace        = var.BUILD_NAMESPACE
+  wait             = "true"
 
   set {
     name  = "azp_url"
@@ -95,7 +111,7 @@ resource "helm_release" "azure-build-agent-openshift" {
   }
 
   set {
-    name = "serviceAccount.name"
+    name  = "serviceAccount.name"
     value = var.BUILD_SERVICEACCOUNT_NAME
   }
 
@@ -105,47 +121,58 @@ resource "helm_release" "azure-build-agent-openshift" {
 #Create Azure Resources Pipeline will deploy into on OCP via Helm
 
 resource "helm_release" "azure-pipeline" {
-  depends_on = [helm_release.azure-build-agent-openshift]
+  depends_on       = [helm_release.azure-build-agent-openshift]
   name             = "azure-devops-pipeline"
   chart            = "../charts/azure-devops-pipeline"
   create_namespace = "true"
-  namespace        = "${var.PIPELINE_NAMESPACE}"
-  wait = "true"
+  namespace        = var.PIPELINE_NAMESPACE
+  wait             = "true"
 
   set {
-    name = "serviceAccount.name"
+    name  = "serviceAccount.name"
     value = var.PIPELINE_SERVICEACCOUNT_NAME
   }
 
   set {
-    name = "serviceAccount.secretname"
+    name  = "serviceAccount.secretname"
     value = var.PIPELINE_SECRETNAME
   }
 
   set {
-    name = "buildNamespace"
+    name  = "buildNamespace"
     value = var.BUILD_NAMESPACE
   }
 
   set {
-    name = "deploy_arogcd_app"
+    name  = "deploy_arogcd_app"
     value = "false"
   }
 
   set {
-    name = "github_repo_devops"
+    name  = "github_repo_devops"
     value = var.GITHUB_REPO_NAME
   }
 
   set {
-    name = "github_repo_devops_ref"
+    name  = "github_repo_devops_ref"
     value = var.GITHUB_REPO_BRANCH
   }
-  
+
 }
 
 #Get ImageRegistry Route(Will move to providers in the next version)
+data "external" "validate_external_registry" {
 
+  program = ["bash", "../scripts/validate-external-registry.sh"]
+  query = {
+    url      = var.IMAGEREGISTRY_URL
+    password = var.IMAGEREGISTRY_PASSWORD
+    username = var.IMAGEREGISTRY_USERNAME
+  }
+}
+
+
+#Get ImageRegistry Route(Will move to providers in the next version)
 data "external" "imageregistry_route" {
   program = ["bash", "../scripts/get-default-hostname.sh"]
 
@@ -157,13 +184,12 @@ data "external" "imageregistry_route" {
 
 
 #Get Secret(Will move to providers in the next version)
-
 data "external" "sa_secret" {
   depends_on = [helm_release.azure-pipeline]
-  program = ["bash", "../scripts/get-secret-token.sh"]
+  program    = ["bash", "../scripts/get-secret-token.sh"]
 
   query = {
-    namespace = var.PIPELINE_NAMESPACE
+    namespace  = var.PIPELINE_NAMESPACE
     secretname = var.PIPELINE_SECRETNAME
   }
 }
@@ -172,27 +198,32 @@ data "external" "sa_secret" {
 
 data "external" "server_url" {
   depends_on = [helm_release.azure-pipeline]
-  program = ["bash", "../scripts/get-server-info.sh"]
+  program    = ["bash", "../scripts/get-server-info.sh"]
 
 }
 
 # Create an Azure DevOps Project
-
 resource "azuredevops_project" "azure-devops-pipeline" {
   name       = "AzureDevOpsPipeline"
   visibility = "private"
 }
 
-#Create an OpenShift Registry Service Connection
+# Set Registry details 
+locals {
+  docker_registry = var.IMAGEREGISTRY_URL != "" ? var.IMAGEREGISTRY_URL : base64decode(data.external.imageregistry_route.result.encoded_route)
+  docker_password = var.IMAGEREGISTRY_PASSWORD != "" ? var.IMAGEREGISTRY_PASSWORD : base64decode(data.external.sa_secret.result.encoded_secret)
+  docker_username = var.IMAGEREGISTRY_USERNAME != "" ? var.IMAGEREGISTRY_USERNAME : var.PIPELINE_SERVICEACCOUNT_NAME
+}
 
-resource "azuredevops_serviceendpoint_dockerregistry" "openshift-registry" {
+#Create a Registry Service Connection
+resource "azuredevops_serviceendpoint_dockerregistry" "pipeline-registry" {
   project_id            = azuredevops_project.azure-devops-pipeline.id
-  service_endpoint_name = "openshift-registry"  
-  docker_registry = chomp(format("%s://%s","https",base64decode(data.external.imageregistry_route.result.encoded_route)))
-  docker_username            = "${var.PIPELINE_SERVICEACCOUNT_NAME}"
-  docker_password            = base64decode(data.external.sa_secret.result.encoded_secret)
-  registry_type = "Others"
-  description = "OpenShift Pipeline Registry Service Connection"
+  service_endpoint_name = "pipeline-registry"
+  docker_registry       = chomp(format("%s://%s", "https", local.docker_registry))
+  docker_username       = local.docker_username
+  docker_password       = local.docker_password
+  registry_type         = "Others"
+  description           = "Pipeline Registry Service Connection"
 }
 
 #Create an OpenShift Cluster Service Connection
@@ -206,7 +237,7 @@ resource "azuredevops_serviceendpoint_kubernetes" "openshift-service-endpoint" {
   service_account {
     token   = data.external.sa_secret.result.encoded_secret
     ca_cert = data.external.sa_secret.result.encoded_ca
-  } 
+  }
 }
 
 #Create an Azure DevOps GitOps Connection
@@ -267,11 +298,11 @@ resource "azuredevops_pipeline_authorization" "azuredevops_pipeline_authorizatio
   pipeline_id = azuredevops_build_definition.azuredevops_build_definition.id
 }
 
-# Authorize Azure DevOps Pipeline to use OpenShift Registry Connection
+# Authorize Azure DevOps Pipeline to use Registry Connection
 
 resource "azuredevops_pipeline_authorization" "azuredevops_pipeline_authorization_endpoint_registry" {
   project_id  = azuredevops_project.azure-devops-pipeline.id
-  resource_id = azuredevops_serviceendpoint_dockerregistry.openshift-registry.id
+  resource_id = azuredevops_serviceendpoint_dockerregistry.pipeline-registry.id
   type        = "endpoint"
   pipeline_id = azuredevops_build_definition.azuredevops_build_definition.id
 }
